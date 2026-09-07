@@ -114,15 +114,19 @@ zostawisz naszą.
 ## Zanim uwierzysz własnym liczbom
 
 [docs/pulapki.md](docs/pulapki.md) to spis naszych błędów z pierwszego tygodnia, każdy
-z ceną, którą zapłaciliśmy. Nie jest to ozdobnik — **cztery z pięciu opisanych tam
-pomyłek dawały wynik wyglądający wiarygodnie** i żadna nie zgłosiła się sama:
+z ceną, którą zapłaciliśmy. Nie jest to ozdobnik — **żadna z nich nie zgłosiła się
+sama, a większość dawała wynik wyglądający całkowicie wiarygodnie**:
 
 - weryfikacja z literówką w nazwie domeny, przez trzy dni publicznie oskarżająca cudzą
   firmę o podszywanie się pod samą siebie,
 - pliki serwowane z pominięciem licznika, dające twarde zero odczytane jako „nikt tego
   nie pobiera",
 - raport filtrujący `status = 200`, w którym szukaliśmy żądań zakończonych inaczej,
-- ruch własny odsiewany z raportów — i test, który przez to wyglądał na nieudany.
+- ruch własny odsiewany z raportów — i test, który przez to wyglądał na nieudany,
+- test przez model, który **zafałszował mierzony wynik**: zapytaliśmy trzy modele
+  o zawartość `llms.txt`, każdy po niego poszedł, i trzy z czterech pobrań tego pliku
+  okazały się nasze własne. Odsiew ruchu własnego tego nie łapie, bo model przychodzi
+  ze swojej sieci — im więcej testujesz, tym bardziej dane potwierdzają to, co testujesz.
 
 Jeśli masz wziąć z tego repozytorium jedną rzecz, weź tę: **każdy pomiar botów wymaga
 próby kontrolnej**, bo inaczej nie odróżnisz „nie przyszli" od „nie umiemy zobaczyć".
