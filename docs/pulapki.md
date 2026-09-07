@@ -136,7 +136,35 @@ pomiary tej samej rzeczy.
 
 ---
 
-## 7. Rzecz, której licznik nie zmierzy nigdy
+## 7. Test przez model, który zafałszował własny pomiar
+
+**Co się stało.** Żeby sprawdzić, czy modele czytają `llms.txt`, poprosiliśmy trzy
+z nich o podanie zawartości tego pliku. Każdy poszedł po niego naprawdę — i każde
+z tych żądań wylądowało w liczniku.
+
+**Skutek.** Raport pokazał `llms.txt` pobrany przez cztery różne boty, w tym
+crawlery dużych modeli. Wyglądało to na dowód, że plik jest w obiegu. **Trzy z tych
+czterech pobrań wywołaliśmy sami**, zadając pytania w czatach. Niezależne było
+jedno.
+
+**Dlaczego odsiew ruchu własnego tego nie złapał.** Bo mechanizm z pułapki 4
+rozpoznaje ruch po *naszym* numerze sieci i znaczniku w `User-Agent`. A gdy pytasz
+model o swoją stronę, to model przychodzi **ze swojej infrastruktury**, z prawdziwym
+podpisem i z adresu, który przechodzi weryfikację. Dla licznika jest to wzorowy,
+autentyczny ruch bota — bo nim jest. Tyle że jego przyczyną jesteś Ty.
+
+**Zasada.** Zapisuj godziny swoich testów i odejmuj je przy interpretacji. Każde
+pytanie zadane modelowi o własną stronę to żądanie, które sam wygenerowałeś —
+tylko cudzymi rękami, więc nie da się go odfiltrować automatycznie.
+
+Ta pułapka jest podstępniejsza od pozostałych, bo **im więcej testujesz, tym
+bardziej Twoje dane potwierdzają to, co testujesz**. Kilkanaście pytań zadanych
+modelom wystarczy, żeby mała domena pokazała „żywy ruch AI", którego bez tych pytań
+by nie było.
+
+---
+
+## 8. Rzecz, której licznik nie zmierzy nigdy
 
 Na koniec ograniczenie, które nie jest błędem, tylko granicą metody — i lepiej wiedzieć
 o niej wcześnie.
