@@ -164,7 +164,80 @@ by nie było.
 
 ---
 
-## 8. Rzecz, której licznik nie zmierzy nigdy
+## 8. Filtr „to człowiek", który ukrył całą klasę ruchu
+
+**Co się stało.** Licznik ma regułę chroniącą prywatność: przeglądarka wysyła
+`sec-fetch-mode` albo `accept-language`, skrypt nie wysyła żadnego z nich, więc
+żądanie z tymi nagłówkami nie jest zapisywane. Licznik botów ma liczyć boty.
+
+**Czego nie przewidzieliśmy.** Model w trybie agenta **dosłownie używa
+przeglądarki**. Wysyła oba nagłówki, bo to naprawdę jest przeglądarka. Warunek
+odrzucał go, i to **zanim cokolwiek sprawdziło, skąd przyszedł**.
+
+**Skutek.** Cała klasa ruchu — agentowe przeglądanie, dziś rosnące najszybciej
+ze wszystkich — była dla licznika niewidzialna. Nie „niedoszacowana": nieobecna.
+
+**Dlaczego trudno było to zauważyć.** Bo błąd nie rozkładał się równo. Crawler
+(Googlebot, Bingbot, PerplexityBot) nie jest przeglądarką, nagłówków nie wysyła
+i liczył się poprawnie. Zestawienie z panelem hostingu wyglądało tak:
+
+| operator | nasz licznik | panel | stosunek |
+|---|---|---|---|
+| Google | 123 | 181 | 1,5x |
+| Microsoft | 43 | 48 | 1,1x |
+| Perplexity | 39 | 60 | 1,5x |
+| Meta | 23 | 28 | 1,2x |
+| Amazon | 10 | 12 | 1,2x |
+| Anthropic | 18 | 9 | 0,5x |
+| **OpenAI** | **49** | **422** | **8,6x** |
+
+Sześciu operatorów w granicach 0,5–1,5x i jeden odstający ośmiokrotnie czytaliśmy
+jako dowód, że wina leży po stronie panelu — bo dziura w naszym liczniku
+„dotyczyłaby wszystkich równo". **Dotyczyłaby, gdyby wszyscy chodzili tak samo.**
+Agentowe przeglądanie na dużą skalę ma dziś w praktyce jeden operator, więc
+brakująca klasa ruchu wyglądała jak wybryk pojedynczej firmy.
+
+**Naprawa.** Pytanie zadane odwrotnie. Weryfikacja pyta „czy ten bot jest z sieci,
+którą deklaruje". Tu trzeba zapytać **„czyja to w ogóle sieć"** — i jeśli adres
+znajduje się na opublikowanej liście crawlerów operatora, zapisać żądanie mimo
+nagłówków przeglądarki. Z serwerowni wystawionej po to, żeby dało się ją
+rozpoznać, nie chodzi po internecie żaden człowiek, więc reguła prywatności
+zostaje nienaruszona. Wszystko inne z nagłówkami przeglądarki nadal wypada.
+
+**Zasada.** Każdy filtr, który chroni prywatność, jest równocześnie filtrem,
+który **ukrywa dane**. To nie jest argument, żeby go zdejmować — to argument,
+żeby **spisać, co każdy filtr ukrywa**, i wracać do tej listy zawsze, gdy liczby
+się nie zgadzają. Nasza lista miała trzy pozycje i tej jednej na niej nie było.
+
+---
+
+## 9. „Zweryfikowany" znaczy *ta infrastruktura*, a nie *ten cel*
+
+To nie jest błąd, który popełniliśmy — to granica metody, którą łatwo przeoczyć,
+bo słowo „zweryfikowany" brzmi mocniej, niż znaczy.
+
+Weryfikacja tożsamości odpowiada na jedno pytanie: **czyja to maszyna**. Nie
+odpowiada na żadne z tych: kto o to poprosił, po co, i co się z treścią stanie
+dalej.
+
+Z tego samego, potwierdzonego zakresu adresów przychodzi crawler budujący indeks
+i agent robiący to, co ktoś obcy wpisał sobie w okno czatu. **Ten sam adres, ta
+sama weryfikacja, dwa zupełnie różne zdarzenia.** Nasza kolumna `zweryfikowany`
+rozstrzyga wyłącznie, czy ktoś się nie podszywa — i nic ponadto.
+
+Ma to konkretną konsekwencję dla każdego, kto **wpuszcza ruch na podstawie
+potwierdzonej tożsamości**, a tak działa dziś większość zapór: sprawdzenie
+odbywa się przy drzwiach i dotyczy nadawcy. To, co dzieje się za drzwiami,
+jest osobnym pytaniem, którego nikt w tym momencie nie zadaje — a jedno wejście
+agenta to kilkadziesiąt dalszych żądań, których pochodzenia już nikt nie bada.
+
+**Zasada.** Nie pisz „prawdziwy ruch AI" tam, gdzie masz na myśli „nie
+podszywa się". I nie czytaj `zweryfikowany = true` jako „bezpieczny" — to są
+dwa różne zdania i tylko pierwsze wynika z danych.
+
+---
+
+## 10. Rzecz, której licznik nie zmierzy nigdy
 
 Na koniec ograniczenie, które nie jest błędem, tylko granicą metody — i lepiej wiedzieć
 o niej wcześnie.

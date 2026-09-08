@@ -1,4 +1,4 @@
-import { __wewnetrzne, rozpoznajBota, czyZOperatora, sprawdzFcrdns } from '../worker/wizyty-botow.js';
+import { __wewnetrzne, rozpoznajBota, czyZOperatora, sprawdzFcrdns, ktoZListy } from '../worker/wizyty-botow.js';
 const { ipv4NaLiczbe, ipv6NaLiczbe, wZakresie } = __wewnetrzne;
 
 let ok = 0, zle = 0;
@@ -86,6 +86,17 @@ try {
   const google = await czyZOperatora('66.249.66.1', 'Google');
   sprawdz('Googlebot z zakresu Google -> true', google.wynik, true);
   sprawdz('  ...i metoda ip_lista',             google.metoda, 'ip_lista');
+
+  // --- ktoZListy: pytanie zadane odwrotnie -----------------------------------
+  // Nie "czy ten bot jest z tej sieci", tylko "czyja to siec". Na tym stoi
+  // wylapywanie agenta chodzacego przegladarka (docs/pulapki.md nr 8): jego
+  // zadania niosa naglowki przegladarki, wiec jedynym dowodem, ze to nie
+  // czlowiek, jest adres z opublikowanej listy operatora.
+  sprawdz('Googlebot -> Google',            await ktoZListy('66.249.66.1'), 'Google');
+  sprawdz('adres spoza wszystkich list',    await ktoZListy('83.20.100.15'), null);
+  sprawdz('adres prywatny',                 await ktoZListy('192.168.1.10'), null);
+  sprawdz('brak adresu',                    await ktoZListy(''), null);
+  sprawdz('adres bez sensu',                await ktoZListy('nie-adres'), null);
 
   // --- FCrDNS ---------------------------------------------------------------
   // Nazwa PTR to miejsce, w ktorym najlatwiej o blad — zwlaszcza przy IPv6,

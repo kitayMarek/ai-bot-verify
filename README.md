@@ -83,6 +83,11 @@ Trzy drogi weryfikacji, w kolejności pewności:
    z trzech kroków czyni metodę bezwartościową** — szczegóły i nasz kosztowny błąd
    w [docs/pulapki.md](docs/pulapki.md).
 
+Wszystkie trzy odpowiadają na pytanie **czyja to maszyna** — i na żadne inne.
+Nie mówią, kto o to poprosił ani po co: z tego samego potwierdzonego zakresu
+przychodzi crawler budujący indeks i agent robiący to, co ktoś obcy wpisał w okno
+czatu. `zweryfikowany = true` znaczy „nie podszywa się", nigdy „bezpieczny".
+
 Osobno odnotowywana jest obecność nagłówków podpisu kryptograficznego (Web Bot Auth).
 Na razie **tylko odnotowywana, bez walidacji** — więc to nie jest weryfikacja i nie
 liczy się jako taka.
@@ -127,6 +132,9 @@ sama, a większość dawała wynik wyglądający całkowicie wiarygodnie**:
   o zawartość `llms.txt`, każdy po niego poszedł, i trzy z czterech pobrań tego pliku
   okazały się nasze własne. Odsiew ruchu własnego tego nie łapie, bo model przychodzi
   ze swojej sieci — im więcej testujesz, tym bardziej dane potwierdzają to, co testujesz.
+- filtr chroniący prywatność („nie logujemy ludzi"), który ukrył **całą klasę
+  ruchu**: model w trybie agenta dosłownie używa przeglądarki, więc wysyłał nagłówki
+  przeglądarki i wypadał z licznika, zanim cokolwiek sprawdziło, skąd przyszedł.
 
 Jeśli masz wziąć z tego repozytorium jedną rzecz, weź tę: **każdy pomiar botów wymaga
 próby kontrolnej**, bo inaczej nie odróżnisz „nie przyszli" od „nie umiemy zobaczyć".
