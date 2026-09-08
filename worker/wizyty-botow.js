@@ -77,6 +77,11 @@ const BOTY = [
   [/Googlebot-Image/i,   'Google',     'Googlebot-Image'],
   [/Googlebot/i,         'Google',     'Googlebot'],
   [/Google-Extended/i,   'Google',     'Google-Extended'],
+  // ⚠ PRZED Bingbotem: podpis AdIdxBota zawiera slowo "bingbot", wiec przy
+  //   odwrotnej kolejnosci nigdy by sie nie dopasowal. To crawler REKLAMOWY
+  //   (sprawdza strony docelowe reklam Microsoft Advertising), nie wyszukiwarka
+  //   i nie model — kategoria_bota() slusznie zostawia go w 'inne'.
+  [/adidxbot/i,          'Microsoft',  'AdIdxBot'],
   [/Bingbot/i,           'Microsoft',  'Bingbot'],
   [/Applebot/i,          'inny',       'Applebot'],
   [/Seznam-?Bot/i,       'inny',       'Seznam-Bot'],
@@ -385,6 +390,40 @@ export async function ktoZListy(ip) {
   return null;
 }
 
+/**
+ * Waga zadania w bajtach — tyle, ile wazy PYTANIE, a nie odpowiedz.
+ *
+ * PO CO. Rozmiar odpowiedzi zapisujemy od poczatku, ale bez drugiej strony nie
+ * mowi on nic o wymianie. Dopiero razem widac, na czym ten handel polega: bot
+ * przysyla kilkaset bajtow naglowkow i zabiera kilkadziesiat kilobajtow tresci.
+ * Ten stosunek jest tez jedynym sygnalem, ktory samoczynnie wylapalby pomylke
+ * w rodzaju obrazka Open Graph wazacego megabajt.
+ *
+ * ⚠ CO TA LICZBA NAPRAWDE ZNACZY. Dwie rzeczy trzeba wiedziec, zanim sie ja
+ * gdziekolwiek poda:
+ *  1. Liczymy tak, jakby szlo po HTTP/1.1. Prawdziwe polaczenie uzywa HTTP/2
+ *     albo /3, gdzie naglowki ida skompresowane (HPACK/QPACK) — wiec to jest
+ *     GORNE OSZACOWANIE, czesto dwu-trzykrotne.
+ *  2. Liczymy to, co doszlo DO NASZEGO KODU, a nie to, co wyslal bot. Warstwa
+ *     brzegowa dokleja po drodze swoje naglowki (cf-*, x-forwarded-*). Do
+ *     porownywania gosci miedzy soba to nie szkodzi, bo kazdy dostaje ten sam
+ *     dodatek. Do zdania "bot wyslal N bajtow" — szkodzi i tak pisac nie wolno.
+ */
+function wagaZadania(request) {
+  try {
+    // Linia zadania: METODA SP sciezka SP HTTP/1.1 CRLF
+    let bajty = request.method.length + new URL(request.url).pathname.length + 13;
+    for (const [nazwa, wartosc] of request.headers) bajty += nazwa.length + wartosc.length + 4;
+    bajty += 2;  // pusta linia konczaca naglowki
+
+    // Cialo — u nas praktycznie zawsze zero, bo boty wysylaja GET.
+    const cialo = Number(request.headers.get('content-length'));
+    return bajty + (Number.isFinite(cialo) && cialo > 0 ? cialo : 0);
+  } catch {
+    return null;
+  }
+}
+
 // --- Zapis ---------------------------------------------------------------
 
 /**
@@ -439,7 +478,20 @@ export async function zapiszWizyteBota(request, wynik, env) {
         // naprawde jest.
         kto = { operator, bot: '(przegladarka z sieci operatora)' };
       } else {
-        kto = { operator: 'nieznany', bot: '(bez podpisu)' };
+        // BRAK PODPISU to co innego niz PODPIS, KTOREGO NIE ZNAMY, a do
+        // 8 wrzesnia 2026 obie sytuacje dostawaly te sama etykiete. Skutek:
+        // kazdy bot spoza naszej listy — na przyklad AdIdxBot, crawler
+        // reklamowy Microsoftu, ktory przedstawia sie wzorowo — trafial do
+        // kubelka "(bez podpisu)" i zawyzal liczbe, ktora publikujemy jako
+        // "ruch, ktory nie przedstawia sie wcale".
+        //
+        // Lista nazw zawsze bedzie spozniona wobec rzeczywistosci, wiec ten
+        // drugi kubelek nie zniknie nigdy — ale ma byc widoczny jako osobny,
+        // bo znaczy dokladnie tyle: "nie nadazamy z lista", a nie "ktos sie
+        // ukrywa". Zarzut ukrywania sie stawiamy tylko przy pustym podpisie.
+        kto = ua.trim()
+          ? { operator: 'nieznany', bot: '(nierozpoznany podpis)' }
+          : { operator: 'nieznany', bot: '(bez podpisu)' };
       }
     }
 
@@ -497,6 +549,7 @@ export async function zapiszWizyteBota(request, wynik, env) {
         sciezka: url.pathname,
         status: wynik.status,
         rozmiar: wynik.rozmiar,
+        rozmiar_zadania: wagaZadania(request),
         mirror: wynik.mirror,
         asn,
         kraj: request.cf?.country ?? null,

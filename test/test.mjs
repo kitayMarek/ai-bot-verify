@@ -170,8 +170,13 @@ sprawdz('  ...z etykieta (bez podpisu)',     bezPodpisu?.bot,       '(bez podpis
 sprawdz('  ...i operatorem nieznany',        bezPodpisu?.operator,  'nieznany');
 sprawdz('  ...bez werdyktu o podszywaniu',   bezPodpisu?.zweryfikowany, null);
 
+// Podpis, ktorego nie znamy, to CO INNEGO niz brak podpisu. Lista nazw zawsze
+// bedzie spozniona wobec rzeczywistosci (AdIdxBot, crawler reklamowy Microsoftu,
+// siedzial u nas w kubelku "bez podpisu" mimo wzorowej deklaracji) — wiec ten
+// kubelek musi byc osobny. Zarzut ukrywania sie stawiamy tylko przy pustym UA.
 const dziwnyUa = await probaZapisu({}, 'python-requests/2.31.0');
-sprawdz('nieznany UA skryptu tez trafia',    dziwnyUa?.bot,         '(bez podpisu)');
+sprawdz('nieznany UA skryptu tez trafia',    dziwnyUa !== null,     true);
+sprawdz('  ...ale jako nierozpoznany podpis', dziwnyUa?.bot,        '(nierozpoznany podpis)');
 
 // Granica prywatnosci: to ma byc licznik BOTOW, nie licznik wszystkiego.
 const zSecFetch = await probaZapisu({ 'sec-fetch-mode': 'navigate' }, 'Mozilla/5.0 (Windows NT 10.0)');
