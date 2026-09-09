@@ -174,7 +174,11 @@ sprawdz('  ...bez werdyktu o podszywaniu',   bezPodpisu?.zweryfikowany, null);
 // bedzie spozniona wobec rzeczywistosci (AdIdxBot, crawler reklamowy Microsoftu,
 // siedzial u nas w kubelku "bez podpisu" mimo wzorowej deklaracji) — wiec ten
 // kubelek musi byc osobny. Zarzut ukrywania sie stawiamy tylko przy pustym UA.
-const dziwnyUa = await probaZapisu({}, 'python-requests/2.31.0');
+// UA celowo WYMYSLONY. Wczesniej stalo tu 'python-requests/2.31.0' i test
+// przestal dzialac w dniu, w ktorym dopisalismy te biblioteke do listy
+// nazw — slusznie, bo od tego momentu nie jest juz nierozpoznana.
+// Sprawdzamy zachowanie dla nazwy, ktorej NIKT nie zna i nie doda.
+const dziwnyUa = await probaZapisu({}, 'CalkiemWymyslonyKlient/9.9');
 sprawdz('nieznany UA skryptu tez trafia',    dziwnyUa !== null,     true);
 sprawdz('  ...ale jako nierozpoznany podpis', dziwnyUa?.bot,        '(nierozpoznany podpis)');
 

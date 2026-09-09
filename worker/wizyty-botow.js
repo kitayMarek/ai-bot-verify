@@ -105,6 +105,32 @@ const BOTY = [
   [/Bytespider/i,        'inny',       'Bytespider'],
   [/YouBot/i,            'inny',       'YouBot'],
   [/Diffbot/i,           'inny',       'Diffbot'],
+
+  // ── Dopisane 9 wrzesnia 2026 po przejrzeniu kubelka "(nierozpoznany podpis)".
+  //
+  // Mial 386 zadan na dobe i wygladal, jakby wymagal podpiecia gotowej bazy
+  // botow. Po rozbiciu na podpisy okazalo sie, ze to OSIEMNASCIE nazw, z czego
+  // wiekszosc ruchu nie ma nazwy Z PREMEDYTACJA — najwiekszy pojedynczy podpis
+  // (177 zadan, 176 sciezek, 91% bledow, 139 prob o pliki wrazliwe) to zwykly
+  // Chrome 131. Zadna baza nazw tego nie nazwie, bo to skaner w przebraniu.
+  //
+  // Dopisujemy wiec recznie te, ktore nazwe maja. Dziesiec minut zamiast nowej
+  // zaleznosci do utrzymywania.
+  [/GoogleOther/i,       'Google',     'GoogleOther'],
+  [/DeepSeekBot/i,       'DeepSeek',   'DeepSeekBot'],
+  [/facebookexternalhit/i, 'Meta',     'facebookexternalhit'],
+  [/SleepBot/i,          'inny',       'SleepBot'],
+  [/ShapBot/i,           'inny',       'ShapBot'],
+
+  // ── Biblioteki HTTP, nie tozsamosci.
+  //
+  // Te podpisy nie mowia KTO przyszedl, tylko CZYM napisano skrypt. To nadal
+  // wiecej niz "(nierozpoznany podpis)": wiadomo, ze to nie przegladarka
+  // i nie znany crawler, tylko czyjes narzedzie. Weryfikacja jest tu z definicji
+  // niemozliwa i tak ma zostac — nie ma czego weryfikowac.
+  [/python-httpx/i,      'inny',       'python-httpx'],
+  [/python-requests/i,   'inny',       'python-requests'],
+  [/Go-http-client/i,    'inny',       'Go-http-client'],
 ];
 
 // --- FCrDNS: weryfikacja operatorow, ktorzy nie publikuja list zakresow ------
@@ -143,6 +169,10 @@ const FCRDNS_SUFIKSY = {
 // w request.cf.asn, wiec sprawdzenie jest darmowe i nie wymaga zapytania DNS.
 const ASN_OPERATORA = {
   'Meta-ExternalAgent': [32934],
+  // Podglady linkow z Facebooka. Ta sama siec co Meta-ExternalAgent, bo to ta
+  // sama firma — a poniewaz Meta nie publikuje listy prefiksow, numer sieci
+  // jest jedyna droga weryfikacji, jaka mamy.
+  'facebookexternalhit': [32934],
 };
 
 /**
@@ -421,6 +451,91 @@ function wagaZadania(request) {
     return bajty + (Number.isFinite(cialo) && cialo > 0 ? cialo : 0);
   } catch {
     return null;
+  }
+}
+
+// --- Przyjscia z odpowiedzi modelu ---------------------------------------
+
+/**
+ * Znaczniki, po ktorych poznajemy, ze czlowiek przyszedl Z ODPOWIEDZI modelu.
+ *
+ * Dwie drogi, bo klienci czatu roznie sie zachowuja: część dokleja wlasny
+ * znacznik do adresu, czesc zostawia zwyklego odsylacza, a czesc nie robi ani
+ * jednego, ani drugiego — i tych ostatnich nie zobaczymy nigdy. Zero przy
+ * danym operatorze nie znaczy wiec "nikt nie klika", tylko "nie umiemy
+ * zobaczyc" — i tak trzeba to podawac.
+ */
+const ZNACZNIKI_AI = [
+  [/^chatgpt\.com$|^chat\.openai\.com$/i, 'ChatGPT'],
+  [/^www\.perplexity\.ai$|^perplexity\.ai$/i, 'Perplexity'],
+  [/^copilot\.microsoft\.com$|^www\.bing\.com$/i, 'Copilot'],
+  [/^gemini\.google\.com$/i, 'Gemini'],
+  [/^claude\.ai$/i, 'Claude'],
+];
+
+function zrodloOdpowiedzi(request, url) {
+  // 1. Znacznik w adresie — ChatGPT dokleja utm_source=chatgpt.com,
+  //    Perplexity utm_source=perplexity.
+  const utm = (url.searchParams.get('utm_source') || '').toLowerCase();
+  if (utm) {
+    // Nie tylko modele: nasz wlasny list tez dostaje znacznik. Dzieki temu
+    // wiadomo, ilu z odbiorcow faktycznie weszlo — a to jest jedyna liczba,
+    // ktora mowi, czy ten kanal cokolwiek robi.
+    if (utm === 'list') return 'Lista';
+    if (utm.includes('chatgpt') || utm.includes('openai')) return 'ChatGPT';
+    if (utm.includes('perplexity')) return 'Perplexity';
+    if (utm.includes('copilot') || utm.includes('bing')) return 'Copilot';
+    if (utm.includes('gemini')) return 'Gemini';
+    if (utm.includes('claude') || utm.includes('anthropic')) return 'Claude';
+  }
+  // 2. Adres odsylajacy — bierzemy SAMA NAZWE SERWISU, nigdy sciezki: sciezka
+  //    odsylajaca potrafi zawierac tresc pytania, a tego nie chcemy widziec
+  //    ani przechowywac.
+  try {
+    const skad = request.headers.get('referer');
+    if (!skad) return null;
+    const host = new URL(skad).hostname;
+    for (const [wzorzec, nazwa] of ZNACZNIKI_AI) if (wzorzec.test(host)) return nazwa;
+  } catch {
+    // pokreczony odsylacz — trudno, nie zgadujemy
+  }
+  return null;
+}
+
+/**
+ * Zlicza przyjscie czlowieka z odpowiedzi modelu. Slupek dzienny: dzien,
+ * zrodlo, sciezka, licznik. Bez adresu, bez podpisu, bez godziny — z takiego
+ * wiersza nie da sie odtworzyc ani osoby, ani pojedynczej wizyty.
+ *
+ * Po co, skoro jest Analytics: bo Analytics wrzuca wizyty bez odsylacza do
+ * kubelka "(bezposrednie)", ktory u nas ma 31% ruchu i nie mowi nic. Tu
+ * pytamy wezej i dostajemy odpowiedz albo jawne zero.
+ */
+export async function zapiszPrzyjscie(request, env) {
+  try {
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
+    const url = new URL(request.url);
+    if (url.hostname.endsWith('.workers.dev')) return;
+
+    // Tylko ruch ludzi. Bot idzie do bot_visits i nie ma tu czego szukac.
+    const przegladarka = request.headers.get('sec-fetch-mode')
+                      || request.headers.get('accept-language');
+    if (!przegladarka) return;
+
+    const zrodlo = zrodloOdpowiedzi(request, url);
+    if (!zrodlo) return;
+
+    await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/zlicz_przyjscie`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ _zrodlo: zrodlo, _sciezka: url.pathname }),
+    });
+  } catch {
+    // Licznik jest dodatkiem i nigdy nie moze przewrocic serwowania stron.
   }
 }
 
