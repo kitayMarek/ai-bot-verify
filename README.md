@@ -139,6 +139,11 @@ sama, a większość dawała wynik wyglądający całkowicie wiarygodnie**:
 Jeśli masz wziąć z tego repozytorium jedną rzecz, weź tę: **każdy pomiar botów wymaga
 próby kontrolnej**, bo inaczej nie odróżnisz „nie przyszli" od „nie umiemy zobaczyć".
 
+## Dalszy rozwój
+
+Proponowane priorytety, kryteria akceptacji i zadania dla kolejnych wersji są
+zebrane w [planie rozwoju](docs/ROADMAP.md).
+
 ## Licencja
 
 MIT. Dane, które sam zbierzesz, są Twoje.
