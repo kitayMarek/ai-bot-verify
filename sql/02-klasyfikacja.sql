@@ -82,7 +82,12 @@ AS $$
     -- (te listy są w każdym narzędziu pentesterskim), więc publikowanie jej
     -- nikomu nie pomaga ani nie szkodzi. Czym innym jest publikowanie, o które
     -- z nich pytano NA TWOJEJ STRONIE — tego nie rób, bo to gotowa mapa.
-    WHEN _sciezka ~* '(\.env|\.git/|/config\.(json|ya?ml|php)|token\.json|-adminsdk\.json|local_settings\.py|appsettings\.json|\.npmrc|wp-login\.php|/wp-includes/|/wp-admin/)'
+    --
+    -- Ostatnie cztery dopisane 14.09.2026 po obserwacji Krzysztofa Balickiego
+    -- (Web Systems) z logów serwerów hostingowych: /@fs/ to odczyt plików przez
+    -- serwer deweloperski Vite (licznik zapisuje ścieżkę bez ?raw??, więc łapiemy
+    -- prefiks), dalej klucze AWS, pliki gcloud i zmienne środowiskowe procesu.
+    WHEN _sciezka ~* '(\.env|\.git/|/config\.(json|ya?ml|php)|token\.json|-adminsdk\.json|local_settings\.py|appsettings\.json|\.npmrc|wp-login\.php|/wp-includes/|/wp-admin/|^/@fs/|\.aws/|gcloud|/proc/self/)'
       THEN 'sekret'
 
     WHEN _sciezka ~* '(\.(js|ts|css)\.map$|^/assets/.*\.map$)' THEN 'kod'
